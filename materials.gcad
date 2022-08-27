@@ -1,0 +1,15 @@
+define_material('BALTIC_BIRCH_PLYWOOD',
+	stepover=3.175,
+	depth_per_pass=1.016,
+	feed_rate=1524,
+	plunge_rate=304.8,
+	rpm=18000
+);
+
+define_material('ALUMINUM',
+	stepover=3.175,
+	depth_per_pass=0.381,
+	feed_rate=1219.2,
+	plunge_rate=254.0,
+	rpm=18000
+);

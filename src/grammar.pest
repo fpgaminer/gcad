@@ -1,0 +1,56 @@
+program = _{
+	SOI ~ stmt* ~ EOI
+}
+
+stmt = _{
+	  forLoop
+	| (expr ~ ";")
+}
+
+forLoop = { "for" ~ ident ~ "in" ~ expr ~ block }
+
+expr = {
+	  mathExpr
+	| assign
+	| trivialExpr
+}
+
+mathExpr = { trivialExpr ~ operation ~ expr }
+
+trivialExpr = _{
+	  literal
+	| "(" ~ expr ~ ")"
+	| funcCall
+	| ident
+}
+
+assign = { ident ~ "=" ~ expr }
+
+operation = _{ add | subtract | multiply | divide }
+	add       = { "+" }
+	subtract  = { "-" }
+	multiply  = { "*" }
+	divide    = { "/" }
+
+literal = _{ unit_number | unitless_number | string}
+	unit_number = { decimal ~ length_unit | integer ~ length_unit }
+	length_unit = { "mm" | "cm" | "m" | "in" | "ft" | "yd" }
+	unitless_number = { decimal | integer }
+	string = @{ "'" ~ ( "''" | (!"'" ~ ANY) )* ~ "'" }
+	integer = @{ ASCII_DIGIT+ }
+	decimal = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+
+ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+funcCall = { ident ~ "(" ~ funcCallParams ~ ")" }
+	funcCallParams = { funcCallParam ~ ("," ~ funcCallParam)* }
+	funcCallParam = _{ namedParam | positionalParam }
+	positionalParam = { expr }
+	namedParam = { ident ~ "=" ~ expr }
+
+block = { "{" ~ stmt* ~ "}" }
+
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }

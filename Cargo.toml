@@ -1,0 +1,17 @@
+[package]
+name = "gcad"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pest = { version = "2.3.0", features = ["const_prec_climber"] }
+pest_derive = "2.3.0"
+syn = { version = "1", features = ["full", "extra-traits", "printing"] }
+quote = "1"
+proc-macro2 = "1"
+clap = { version = "3.2.17", features = ["derive"] }
+
+[lib]
+proc-macro = true
+name = "gcad_macro"
+path = "src/lib.rs"
