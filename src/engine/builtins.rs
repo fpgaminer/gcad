@@ -2,9 +2,12 @@ use std::collections::HashMap;
 
 use gcad_macro::ffi_func;
 
-use crate::{numbers::{Number, Unit}, value::ScriptValue};
+use crate::{
+	numbers::{Number, Unit},
+	value::ScriptValue,
+};
 
-use super::{ScriptEngine, Material};
+use super::{Material, ScriptEngine};
 
 impl ScriptEngine {
 	pub fn call_builtin(&mut self, ident: &str, args: &[ScriptValue], nargs: &HashMap<String, ScriptValue>) -> Option<ScriptValue> {
@@ -22,7 +25,7 @@ impl ScriptEngine {
 			_ => None,
 		}
 	}
-	
+
 	#[ffi_func]
 	fn builtin_rpm(&mut self, rpm: Number) -> ScriptValue {
 		let rpm = rpm.as_float().expect("rpm argument must be a number");
@@ -68,11 +71,9 @@ impl ScriptEngine {
 			}
 
 			(x1, y1 + up)
-		}
-		else if let (Some(x2), Some(y2)) = (x2, y2) {
+		} else if let (Some(x2), Some(y2)) = (x2, y2) {
 			(x2, y2)
-		}
-		else {
+		} else {
 			panic!("contour_line requires either x2/y2 or another argument that derives them like up");
 		};
 
@@ -80,7 +81,13 @@ impl ScriptEngine {
 			panic!("contour_line arguments must have a unit");
 		}
 
-		self.gcode.contour_line(x1.convert_unit(Unit::MM).into(), y1.convert_unit(Unit::MM).into(), x2.convert_unit(Unit::MM).into(), y2.convert_unit(Unit::MM).into(), depth.convert_unit(Unit::MM).into());
+		self.gcode.contour_line(
+			x1.convert_unit(Unit::MM).into(),
+			y1.convert_unit(Unit::MM).into(),
+			x2.convert_unit(Unit::MM).into(),
+			y2.convert_unit(Unit::MM).into(),
+			depth.convert_unit(Unit::MM).into(),
+		);
 
 		ScriptValue::Null
 	}
@@ -91,7 +98,11 @@ impl ScriptEngine {
 			panic!("drill arguments must have a unit");
 		}
 
-		self.gcode.drill(x.convert_unit(Unit::MM).into(), y.convert_unit(Unit::MM).into(), depth.convert_unit(Unit::MM).into());
+		self.gcode.drill(
+			x.convert_unit(Unit::MM).into(),
+			y.convert_unit(Unit::MM).into(),
+			depth.convert_unit(Unit::MM).into(),
+		);
 
 		ScriptValue::Null
 	}
@@ -110,13 +121,26 @@ impl ScriptEngine {
 			panic!("circle_pocket arguments must have a unit");
 		}
 
-		self.gcode.circle_pocket(cx.convert_unit(Unit::MM).into(), cy.convert_unit(Unit::MM).into(), diameter.convert_unit(Unit::MM).into(), depth.convert_unit(Unit::MM).into());
+		self.gcode.circle_pocket(
+			cx.convert_unit(Unit::MM).into(),
+			cy.convert_unit(Unit::MM).into(),
+			diameter.convert_unit(Unit::MM).into(),
+			depth.convert_unit(Unit::MM).into(),
+		);
 
 		ScriptValue::Null
 	}
 
 	#[ffi_func]
-	fn builtin_define_material(&mut self, name: String, stepover: Number, depth_per_pass: Number, feed_rate: Number, plunge_rate: Number, rpm: Number) -> ScriptValue {
+	fn builtin_define_material(
+		&mut self,
+		name: String,
+		stepover: Number,
+		depth_per_pass: Number,
+		feed_rate: Number,
+		plunge_rate: Number,
+		rpm: Number,
+	) -> ScriptValue {
 		let material = Material {
 			stepover: stepover.as_float().expect("stepover must be a number"),
 			depth_per_pass: depth_per_pass.as_float().expect("depth_per_pass must be a number"),
@@ -136,7 +160,13 @@ impl ScriptEngine {
 			panic!("groove_pocket arguments must have a unit");
 		}
 
-		self.gcode.groove_pocket(x.convert_unit(Unit::MM).into(), y.convert_unit(Unit::MM).into(), width.convert_unit(Unit::MM).into(), height.convert_unit(Unit::MM).into(), depth.convert_unit(Unit::MM).into());
+		self.gcode.groove_pocket(
+			x.convert_unit(Unit::MM).into(),
+			y.convert_unit(Unit::MM).into(),
+			width.convert_unit(Unit::MM).into(),
+			height.convert_unit(Unit::MM).into(),
+			depth.convert_unit(Unit::MM).into(),
+		);
 
 		ScriptValue::Null
 	}

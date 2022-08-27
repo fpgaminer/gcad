@@ -2,10 +2,14 @@ mod builtins;
 
 use std::{collections::HashMap, path::Path};
 
-use pest::{Parser, prec_climber::{PrecClimber, Assoc}, iterators::Pair};
+use pest::{
+	iterators::Pair,
+	prec_climber::{Assoc, PrecClimber},
+	Parser,
+};
 use pest_derive::Parser;
 
-use crate::{value::ScriptValue, numbers::Number, gcode::GcodeState};
+use crate::{gcode::GcodeState, numbers::Number, value::ScriptValue};
 
 
 #[derive(Parser)]
@@ -13,8 +17,10 @@ use crate::{value::ScriptValue, numbers::Number, gcode::GcodeState};
 pub struct ScriptParser;
 
 static CLIMBER: PrecClimber<Rule> = PrecClimber::new_const(&[
-	(Rule::add, 1, Assoc::Left), (Rule::subtract, 1, Assoc::Left),
-	(Rule::multiply, 2, Assoc::Left), (Rule::divide, 2, Assoc::Left),
+	(Rule::add, 1, Assoc::Left),
+	(Rule::subtract, 1, Assoc::Left),
+	(Rule::multiply, 2, Assoc::Left),
+	(Rule::divide, 2, Assoc::Left),
 ]);
 
 pub struct ScriptEngine {
@@ -79,7 +85,7 @@ impl ScriptEngine {
 	fn exec(&mut self, pair: pest::iterators::Pair<Rule>) -> ScriptValue {
 		println!("build_ast_from_expr: {:?}", pair);
 		println!("Rule: {:?}", pair.as_rule());
-	
+
 		match pair.as_rule() {
 			Rule::expr => self.exec(pair.into_inner().next().unwrap()),
 			Rule::assign => {
@@ -92,21 +98,17 @@ impl ScriptEngine {
 
 				expr
 			},
-			Rule::mathExpr => {
-				CLIMBER.climb(
-					pair.into_inner(),
-					|pair: Pair<Rule>| self.exec(pair),
-					|lhs: ScriptValue, op: Pair<Rule>, rhs: ScriptValue| {
-						match op.as_rule() {
-							Rule::add => lhs + rhs,
-							Rule::subtract => lhs - rhs,
-							Rule::multiply => lhs * rhs,
-							Rule::divide => lhs / rhs,
-							_ => unreachable!(),
-						}
-					}
-				)
-			},
+			Rule::mathExpr => CLIMBER.climb(
+				pair.into_inner(),
+				|pair: Pair<Rule>| self.exec(pair),
+				|lhs: ScriptValue, op: Pair<Rule>, rhs: ScriptValue| match op.as_rule() {
+					Rule::add => lhs + rhs,
+					Rule::subtract => lhs - rhs,
+					Rule::multiply => lhs * rhs,
+					Rule::divide => lhs / rhs,
+					_ => unreachable!(),
+				},
+			),
 			Rule::string => {
 				let str = &pair.as_str();
 				let str = &str[1..str.len() - 1];
@@ -133,7 +135,7 @@ impl ScriptEngine {
 					Rule::decimal => Number::from_float(value.as_str().parse::<f64>().unwrap()),
 					_ => panic!("Unexpected rule: {:?}", value.as_rule()),
 				};
-	
+
 				ScriptValue::Number(value)
 			},
 			Rule::unit_number => {
@@ -145,7 +147,7 @@ impl ScriptEngine {
 					Rule::decimal => Number::from_float_and_unit(value.as_str().parse().unwrap(), unit.as_str()),
 					_ => panic!("Unexpected rule: {:?}", value.as_rule()),
 				};
-	
+
 				ScriptValue::Number(value)
 			},
 			Rule::ident => {
@@ -166,7 +168,8 @@ impl ScriptEngine {
 
 				if let ScriptValue::Range { start, step, num } = range {
 					for i in 0..num {
-						self.global_vars.insert(loop_variable.to_string(), ScriptValue::Number(start + step * (i as i64).into()));
+						self.global_vars
+							.insert(loop_variable.to_string(), ScriptValue::Number(start + step * (i as i64).into()));
 						self.exec(block.clone());
 					}
 				} else {
@@ -206,7 +209,6 @@ impl ScriptEngine {
 		(positional_args, named_args)
 	}
 }
-
 
 
 struct Material {

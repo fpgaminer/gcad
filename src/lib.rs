@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
 
 
 #[proc_macro_attribute]
@@ -8,7 +8,7 @@ pub fn ffi_func(_args: TokenStream, input: TokenStream) -> TokenStream {
 		Ok(ast) => ast,
 		Err(e) => {
 			panic!("{}", e);
-		}
+		},
 	};
 
 	let func_ident = ast.sig.ident.clone();
@@ -20,15 +20,14 @@ pub fn ffi_func(_args: TokenStream, input: TokenStream) -> TokenStream {
 			Some(ident) => ident,
 			None => {
 				continue;
-			}
+			},
 		};
 
 		let is_optional = is_argument_optional(arg);
 		let arg_ident = format_ident!("arg{}", idx);
 
 		let optional_logic = if is_optional {
-			quote! {
-			}
+			quote! {}
 		} else {
 			let err_msg = format!("{}: {} is required", func_ident, ident);
 			quote! {
@@ -36,7 +35,7 @@ pub fn ffi_func(_args: TokenStream, input: TokenStream) -> TokenStream {
 			}
 		};
 
-		let parser = quote!{
+		let parser = quote! {
 			let mut #arg_ident = args.next().cloned();
 
 			if let Some(arg) = nargs.remove(#ident) {
@@ -48,11 +47,11 @@ pub fn ffi_func(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 		arg_parsers.push(parser);
 		call_args.push(if is_optional {
-			quote!{
+			quote! {
 				#arg_ident.map(|#arg_ident| #arg_ident.try_into().expect("#func_ident: argument #idx is not the correct type"))
 			}
 		} else {
-			quote!{
+			quote! {
 				#arg_ident.try_into().expect("#func_ident: argument #idx is not the correct type")
 			}
 		});

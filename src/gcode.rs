@@ -1,4 +1,8 @@
-use std::{io::{BufWriter, Write}, fs::File, path::Path};
+use std::{
+	fs::File,
+	io::{BufWriter, Write},
+	path::Path,
+};
 
 const RETRACT: f64 = 0.25;
 
@@ -42,11 +46,15 @@ impl GcodeState {
 	}
 
 	pub fn write_header(&mut self) {
-		self.file.write_all("G90\nG21\n(Move to safe Z to avoid workholding)\nG53G0Z-5.000\nM05\n".as_bytes()).expect("Could not write to file");
+		self.file
+			.write_all("G90\nG21\n(Move to safe Z to avoid workholding)\nG53G0Z-5.000\nM05\n".as_bytes())
+			.expect("Could not write to file");
 	}
 
 	pub fn set_rpm(&mut self, rpm: f64) {
-		self.file.write_all(format!("M03S{}\n", format_number(rpm)).as_bytes()).expect("Failed to write to file");
+		self.file
+			.write_all(format!("M03S{}\n", format_number(rpm)).as_bytes())
+			.expect("Failed to write to file");
 	}
 
 	pub fn write_comment(&mut self, comment: &str) {
@@ -76,7 +84,9 @@ impl GcodeState {
 			command.push(format!("F{}", format_number(self.feed_rate)));
 		}
 
-		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes()).expect("Failed to write to file");
+		self.file
+			.write_all(format!("{}\n", command.join(" ")).as_bytes())
+			.expect("Failed to write to file");
 
 		self.last_feed = Some(self.feed_rate);
 		self.last_command = Some("G1".to_string());
@@ -101,7 +111,9 @@ impl GcodeState {
 			command.push(format!("F{}", format_number(self.plunge_rate)));
 		}
 
-		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes()).expect("Failed to write to file");
+		self.file
+			.write_all(format!("{}\n", command.join(" ")).as_bytes())
+			.expect("Failed to write to file");
 
 		self.last_feed = Some(self.plunge_rate);
 		self.last_command = Some("G1".to_string());
@@ -133,7 +145,9 @@ impl GcodeState {
 			}
 		}
 
-		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes()).expect("Failed to write to file");
+		self.file
+			.write_all(format!("{}\n", command.join(" ")).as_bytes())
+			.expect("Failed to write to file");
 
 		self.last_command = Some("G0".to_string());
 		self.x = Some(x);
@@ -147,7 +161,7 @@ impl GcodeState {
 		if self.x == Some(x) && self.y == Some(y) {
 			return;
 		}
-		
+
 		let mut command = Vec::new();
 
 		if self.last_command != Some("G3".to_string()) {
@@ -161,18 +175,16 @@ impl GcodeState {
 		if self.y != Some(y) {
 			command.push(format!("Y{}", format_number(y)));
 		}
-		
+
 		if let Some(current_x) = self.x {
 			command.push(format!("I{}", format_number(cx - current_x)));
-		}
-		else {
+		} else {
 			panic!("No current x position");
 		}
 
 		if let Some(current_y) = self.y {
 			command.push(format!("J{}", format_number(cy - current_y)));
-		}
-		else {
+		} else {
 			panic!("No current y position");
 		}
 
@@ -180,7 +192,9 @@ impl GcodeState {
 			command.push(format!("F{}", format_number(self.feed_rate)));
 		}
 
-		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes()).expect("Failed to write to file");
+		self.file
+			.write_all(format!("{}\n", command.join(" ")).as_bytes())
+			.expect("Failed to write to file");
 
 		self.last_feed = Some(self.feed_rate);
 		self.last_command = Some("G3".to_string());
@@ -229,8 +243,7 @@ impl GcodeState {
 
 				if j == n_circles {
 					self.arc_cut(2.0 * cx - self.x.unwrap(), cy, cx, cy);
-				}
-				else {
+				} else {
 					self.arc_cut(2.0 * cx - self.x.unwrap() + self.cutter_diameter / 2.0, cy, cx + self.cutter_diameter / 4.0, cy);
 				}
 			}
@@ -286,8 +299,7 @@ impl GcodeState {
 				self.rapid_move(x, y, None);
 				self.rapid_move(x, y, Some(5.0));
 				self.plunge(z);
-			}
-			else {
+			} else {
 				self.rapid_move(x, y, None);
 				self.plunge(z);
 			}

@@ -1,4 +1,7 @@
-use std::{ops::{Add, Div, Sub, Mul}, str::FromStr};
+use std::{
+	ops::{Add, Div, Mul, Sub},
+	str::FromStr,
+};
 
 use crate::value::ScriptValue;
 
@@ -11,14 +14,18 @@ pub struct Number {
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Unit {
-	MM, CM, M,
-	FT, IN, YD,
+	MM,
+	CM,
+	M,
+	FT,
+	IN,
+	YD,
 	None,
 }
 
 impl FromStr for Unit {
 	type Err = ();
-	
+
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s {
 			"mm" => Ok(Unit::MM),
@@ -49,7 +56,7 @@ impl InnerValue {
 
 impl Add for InnerValue {
 	type Output = InnerValue;
-	
+
 	fn add(self, other: InnerValue) -> InnerValue {
 		match (self, other) {
 			(InnerValue::Integer(i), InnerValue::Integer(j)) => InnerValue::Integer(i + j),
@@ -62,7 +69,7 @@ impl Add for InnerValue {
 
 impl Sub for InnerValue {
 	type Output = InnerValue;
-	
+
 	fn sub(self, other: InnerValue) -> InnerValue {
 		match (self, other) {
 			(InnerValue::Integer(i), InnerValue::Integer(j)) => InnerValue::Integer(i - j),
@@ -75,7 +82,7 @@ impl Sub for InnerValue {
 
 impl Mul for InnerValue {
 	type Output = InnerValue;
-	
+
 	fn mul(self, other: InnerValue) -> InnerValue {
 		match (self, other) {
 			(InnerValue::Integer(i), InnerValue::Integer(j)) => InnerValue::Integer(i * j),
@@ -88,7 +95,7 @@ impl Mul for InnerValue {
 
 impl Div for InnerValue {
 	type Output = InnerValue;
-	
+
 	fn div(self, other: InnerValue) -> InnerValue {
 		match (self, other) {
 			(InnerValue::Integer(i), InnerValue::Integer(j)) => InnerValue::Float(i as f64 / j as f64),
@@ -185,21 +192,14 @@ impl Number {
 			(Unit::YD, Unit::YD) => self.value,
 		};
 
-		Number {
-			value,
-			unit,
-		}
+		Number { value, unit }
 	}
 }
 
 fn convert_units_for_math(lhs: &Number, rhs: &Number) -> (Number, Number) {
 	// If only one of the numbers has a unit, use that unit.
 	// Otherwise, use the unit of the first number (lhs).
-	let dst_unit = if lhs.unit == Unit::None {
-		rhs.unit
-	} else {
-		lhs.unit
-	};
+	let dst_unit = if lhs.unit == Unit::None { rhs.unit } else { lhs.unit };
 
 	(lhs.convert_unit(dst_unit), rhs.convert_unit(dst_unit))
 }
@@ -230,7 +230,7 @@ math_impl! {
 
 impl TryFrom<ScriptValue> for Number {
 	type Error = &'static str;
-	
+
 	fn try_from(value: ScriptValue) -> Result<Self, Self::Error> {
 		match value {
 			ScriptValue::Number(n) => Ok(n),
@@ -274,7 +274,7 @@ impl From<f64> for Number {
 
 impl TryFrom<Number> for i64 {
 	type Error = &'static str;
-	
+
 	fn try_from(n: Number) -> Result<Self, Self::Error> {
 		match n.value {
 			InnerValue::Integer(i) => Ok(i),

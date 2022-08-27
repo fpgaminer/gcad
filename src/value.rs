@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Sub, Mul};
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::numbers::Number;
 
@@ -7,11 +7,7 @@ use crate::numbers::Number;
 pub enum ScriptValue {
 	Number(Number),
 	String(String),
-	Range {
-		start: Number,
-		step: Number,
-		num: usize,
-	},
+	Range { start: Number, step: Number, num: usize },
 	Null,
 }
 

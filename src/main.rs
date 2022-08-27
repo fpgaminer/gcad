@@ -1,27 +1,27 @@
-mod numbers;
-mod value;
 mod engine;
 mod gcode;
+mod numbers;
+mod value;
 
-use std::{fs, path::PathBuf};
 use clap::Parser;
 use engine::ScriptEngine;
+use std::{fs, path::PathBuf};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-   /// Name of the person to greet
-   #[clap(short, long, value_parser, required = true)]
-   output: PathBuf,
+	/// Name of the person to greet
+	#[clap(short, long, value_parser, required = true)]
+	output: PathBuf,
 
-   /// Input file
-   #[clap(required = true)]
-   input: PathBuf,
+	/// Input file
+	#[clap(required = true)]
+	input: PathBuf,
 }
 
 fn main() {
 	let args = Args::parse();
-	
+
 	let unparsed_file = fs::read_to_string(args.input).expect("Failed to read input file");
 	let mut machine = ScriptEngine::new(args.output);
 
