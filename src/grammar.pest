@@ -37,8 +37,8 @@ literal = _{ unit_number | unitless_number | string}
 	length_unit = { "mm" | "cm" | "m" | "in" | "ft" | "yd" }
 	unitless_number = { decimal | integer }
 	string = @{ "'" ~ ( "''" | (!"'" ~ ANY) )* ~ "'" }
-	integer = @{ ASCII_DIGIT+ }
-	decimal = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+	integer = @{ "-"? ~ ASCII_DIGIT+ }
+	decimal = @{ "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
 
 ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 

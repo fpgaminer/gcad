@@ -4,7 +4,8 @@ use std::{
 	path::Path,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context, Result, anyhow};
+use nalgebra::{Matrix3, Point2};
 
 const RETRACT: f64 = 0.25;
 
@@ -20,9 +21,10 @@ pub struct GcodeState {
 	last_feed: Option<f64>,
 	last_command: Option<String>,
 
-	x: Option<f64>,
-	y: Option<f64>,
-	z: Option<f64>,
+	position_xy: Option<Point2<f64>>,
+	position_z: Option<f64>,
+
+	pub transformation: Matrix3<f64>,
 }
 
 impl GcodeState {
@@ -41,9 +43,10 @@ impl GcodeState {
 			last_feed: None,
 			last_command: None,
 
-			x: None,
-			y: None,
-			z: None,
+			position_xy: None,
+			position_z: None,
+
+			transformation: Matrix3::identity(),
 		})
 	}
 
@@ -63,8 +66,18 @@ impl GcodeState {
 		Ok(())
 	}
 
-	pub fn cutting_move(&mut self, x: f64, y: f64) -> Result<()> {
-		if self.x == Some(x) && self.y == Some(y) {
+	pub fn cutting_move(&mut self, x: Option<f64>, y: Option<f64>, z: Option<f64>) -> Result<()> {
+		let xy = match (x, y) {
+			(None, None) => None,
+			(x, y) => Some(Point2::new(
+				x.map(|x| Ok(x)).unwrap_or_else(|| self.position_xy.ok_or(anyhow!("No position set")).map(|p| p.x))?,
+				y.map(|y| Ok(y)).unwrap_or_else(|| self.position_xy.ok_or(anyhow!("No position set")).map(|p| p.y))?,
+			)),
+		};
+
+		let xy = xy.map(|xy| self.transformation.transform_point(&xy));
+
+		if xy.map(|xy| Some(xy) == self.position_xy).unwrap_or(true) && z.map(|z| Some(z) == self.position_z).unwrap_or(true) {
 			return Ok(());
 		}
 
@@ -72,32 +85,43 @@ impl GcodeState {
 
 		if self.last_command != Some("G1".to_string()) {
 			command.push("G1".to_string());
+
+			self.last_command = Some("G1".to_string());
 		}
 
-		if self.x != Some(x) {
-			command.push(format!("X{}", format_number(x)));
+		if let Some(xy) = xy {
+			if Some(xy.x) != self.position_xy.map(|p| p.x) {
+				command.push(format!("X{}", format_number(xy.x)));
+			}
+
+			if Some(xy.y) != self.position_xy.map(|p| p.y) {
+				command.push(format!("Y{}", format_number(xy.y)));
+			}
+
+			self.position_xy = Some(xy);
 		}
 
-		if self.y != Some(y) {
-			command.push(format!("Y{}", format_number(y)));
+		if let Some(z) = z {
+			if Some(z) != self.position_z {
+				command.push(format!("Z{}", format_number(z)));
+			}
+
+			self.position_z = Some(z);
 		}
 
 		if self.last_feed != Some(self.feed_rate) {
 			command.push(format!("F{}", format_number(self.feed_rate)));
+
+			self.last_feed = Some(self.feed_rate);
 		}
 
 		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes())?;
-
-		self.last_feed = Some(self.feed_rate);
-		self.last_command = Some("G1".to_string());
-		self.x = Some(x);
-		self.y = Some(y);
 
 		Ok(())
 	}
 
 	pub fn plunge(&mut self, z: f64) -> Result<()> {
-		if self.z == Some(z) {
+		if self.position_z == Some(z) {
 			return Ok(());
 		}
 
@@ -117,13 +141,23 @@ impl GcodeState {
 
 		self.last_feed = Some(self.plunge_rate);
 		self.last_command = Some("G1".to_string());
-		self.z = Some(z);
+		self.position_z = Some(z);
 
 		Ok(())
 	}
 
-	pub fn rapid_move(&mut self, x: f64, y: f64, z: Option<f64>) -> Result<()> {
-		if self.x == Some(x) && self.y == Some(y) && self.z == z {
+	pub fn rapid_move(&mut self, x: Option<f64>, y: Option<f64>, z: Option<f64>) -> Result<()> {
+		let xy = match (x, y) {
+			(None, None) => None,
+			(x, y) => Some(Point2::new(
+				x.map(|x| Ok(x)).unwrap_or_else(|| self.position_xy.ok_or(anyhow!("No position set")).map(|p| p.x))?,
+				y.map(|y| Ok(y)).unwrap_or_else(|| self.position_xy.ok_or(anyhow!("No position set")).map(|p| p.y))?,
+			)),
+		};
+
+		let xy = xy.map(|xy| self.transformation.transform_point(&xy));
+
+		if xy.map(|xy| Some(xy) == self.position_xy).unwrap_or(true) && z.map(|z| Some(z) == self.position_z).unwrap_or(true) {
 			return Ok(());
 		}
 
@@ -131,36 +165,53 @@ impl GcodeState {
 
 		if self.last_command != Some("G0".to_string()) {
 			command.push("G0".to_string());
+
+			self.last_command = Some("G0".to_string());
 		}
 
-		if self.x != Some(x) {
-			command.push(format!("X{}", format_number(x)));
-		}
+		if let Some(xy) = xy {
+			if Some(xy.x) != self.position_xy.map(|p| p.x) {
+				command.push(format!("X{}", format_number(xy.x)));
+			}
 
-		if self.y != Some(y) {
-			command.push(format!("Y{}", format_number(y)));
+			if Some(xy.y) != self.position_xy.map(|p| p.y) {
+				command.push(format!("Y{}", format_number(xy.y)));
+			}
+
+			self.position_xy = Some(xy);
 		}
 
 		if let Some(z) = z {
-			if self.z != Some(z) {
+			if self.position_z != Some(z) {
 				command.push(format!("Z{}", format_number(z)));
 			}
+
+			self.position_z = Some(z);
 		}
 
 		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes())?;
 
-		self.last_command = Some("G0".to_string());
-		self.x = Some(x);
-		self.y = Some(y);
-		if let Some(z) = z {
-			self.z = Some(z);
-		}
-
 		Ok(())
 	}
 
+	pub fn rapid_move_xy(&mut self, x: f64, y: f64) -> Result<()> {
+		self.rapid_move(Some(x), Some(y), None)
+	}
+
+	pub fn rapid_move_xyz(&mut self, x: f64, y: f64, z: f64) -> Result<()> {
+		self.rapid_move(Some(x), Some(y), Some(z))
+	}
+
+	pub fn rapid_move_z(&mut self, z: f64) -> Result<()> {
+		self.rapid_move(None, None, Some(z))
+	}
+
 	pub fn arc_cut(&mut self, x: f64, y: f64, cx: f64, cy: f64) -> Result<()> {
-		if self.x == Some(x) && self.y == Some(y) {
+		let xy = self.transformation.transform_point(&Point2::new(x, y));
+		let cxy = self.transformation.transform_point(&Point2::new(cx, cy));
+		let current_xy = self.position_xy.ok_or(anyhow!("No current XY position"))?;
+
+		if xy == current_xy {
 			return Ok(());
 		}
 
@@ -168,47 +219,39 @@ impl GcodeState {
 
 		if self.last_command != Some("G3".to_string()) {
 			command.push("G3".to_string());
+
+			self.last_command = Some("G3".to_string());
 		}
 
-		if self.x != Some(x) {
-			command.push(format!("X{}", format_number(x)));
+		if xy.x != current_xy.x {
+			command.push(format!("X{}", format_number(xy.x)));
 		}
 
-		if self.y != Some(y) {
-			command.push(format!("Y{}", format_number(y)));
+		if xy.y != current_xy.y {
+			command.push(format!("Y{}", format_number(xy.y)));
 		}
 
-		if let Some(current_x) = self.x {
-			command.push(format!("I{}", format_number(cx - current_x)));
-		} else {
-			bail!("No current X position");
-		}
-
-		if let Some(current_y) = self.y {
-			command.push(format!("J{}", format_number(cy - current_y)));
-		} else {
-			bail!("No current y position");
-		}
+		command.push(format!("I{}", format_number(cxy.x - current_xy.x)));
+		command.push(format!("J{}", format_number(cxy.y - current_xy.y)));
 
 		if self.last_feed != Some(self.feed_rate) {
 			command.push(format!("F{}", format_number(self.feed_rate)));
+
+			self.last_feed = Some(self.feed_rate);
 		}
 
 		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes())?;
 
-		self.last_feed = Some(self.feed_rate);
-		self.last_command = Some("G3".to_string());
-		self.x = Some(x);
-		self.y = Some(y);
+		self.position_xy = Some(xy);
 
 		Ok(())
 	}
 
-	pub fn drill(&mut self, x: f64, y: f64, z: f64) -> Result<()> {
-		self.rapid_move(x, y, None)?;
-		self.rapid_move(x, y, Some(0.25))?;
-		self.plunge(z)?;
-		self.rapid_move(x, y, Some(5.0))?;
+	pub fn drill(&mut self, x: f64, y: f64, depth: f64) -> Result<()> {
+		self.rapid_move_xy(x, y)?;
+		self.rapid_move_z(0.25)?;
+		self.plunge(-depth)?;
+		self.rapid_move_z(5.0)?;
 
 		Ok(())
 	}
@@ -218,10 +261,10 @@ impl GcodeState {
 
 		for layer in 1..=n_passes {
 			let z = -(depth * layer as f64 / n_passes as f64);
-			self.rapid_move(x1, y1, None)?;
+			self.rapid_move_xy(x1, y1)?;
 			self.plunge(z)?;
-			self.cutting_move(x2, y2)?;
-			self.rapid_move(x2, y2, Some(5.0))?;
+			self.cutting_move(Some(x2), Some(y2), None)?;
+			self.rapid_move_z(5.0)?;
 		}
 
 		Ok(())
@@ -236,28 +279,28 @@ impl GcodeState {
 		let n_passes = (depth / self.depth_per_pass).ceil() as i64;
 		let x_offset = (diameter / 2.0) - (self.cutter_diameter * n_circles as f64 / 2.0);
 
-		self.rapid_move(cx + x_offset, cy, None)?;
+		self.rapid_move_xy(cx + x_offset, cy)?;
 		self.plunge(2.5)?;
 
 		for i in 1..=n_passes {
 			self.plunge(-(depth * i as f64 / n_passes as f64))?;
 
 			for j in 1..=n_circles {
-				self.arc_cut(2.0 * cx - self.x.unwrap(), cy, cx, cy)?;
+				self.arc_cut(2.0 * cx - self.position_xy.unwrap().x, cy, cx, cy)?;
 
 				if j == n_circles {
-					self.arc_cut(2.0 * cx - self.x.unwrap(), cy, cx, cy)?;
+					self.arc_cut(2.0 * cx - self.position_xy.unwrap().x, cy, cx, cy)?;
 				} else {
-					self.arc_cut(2.0 * cx - self.x.unwrap() + self.cutter_diameter / 2.0, cy, cx + self.cutter_diameter / 4.0, cy)?;
+					self.arc_cut(2.0 * cx - self.position_xy.unwrap().x + self.cutter_diameter / 2.0, cy, cx + self.cutter_diameter / 4.0, cy)?;
 				}
 			}
 
 			if i < n_passes {
-				self.cutting_move(cx + x_offset, cy)?;
+				self.cutting_move(Some(cx + x_offset), Some(cy), None)?;
 			}
 		}
 
-		self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(5.0))?;
+		self.rapid_move_z(5.0)?;
 
 		Ok(())
 	}
@@ -303,22 +346,22 @@ impl GcodeState {
 			let (x, y) = pattern[0];
 
 			if layer == 1 {
-				self.rapid_move(x, y, None)?;
-				self.rapid_move(x, y, Some(5.0))?;
+				self.rapid_move_xy(x, y)?;
+				self.rapid_move_z(5.0)?;
 				self.plunge(z)?;
 			} else {
-				self.rapid_move(x, y, None)?;
+				self.rapid_move_xy(x, y)?;
 				self.plunge(z)?;
 			}
 
 			for (x, y) in pattern.iter().skip(1) {
-				self.cutting_move(*x, *y)?;
+				self.cutting_move(Some(*x), Some(*y), None)?;
 			}
 
-			self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(self.z.unwrap() + RETRACT))?;
+			self.rapid_move_z(z + RETRACT)?;
 		}
 
-		self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(5.0))?;
+		self.rapid_move_z(5.0)?;
 
 		Ok(())
 	}

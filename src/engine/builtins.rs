@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use gcad_macro::ffi_func;
 
 use anyhow::{anyhow, bail, Result};
+use nalgebra::{Matrix3, Vector2};
 
 use crate::{
 	numbers::{Number, Unit},
@@ -24,6 +25,7 @@ impl ScriptEngine {
 			"groove_pocket" => Some(self.builtin_groove_pocket_ffi(args, nargs)?),
 			"comment" => Some(self.builtin_comment_ffi(args, nargs)?),
 			"linspace" => Some(self.builtin_linspace_ffi(args, nargs)?),
+			"scale" => Some(self.builtin_scale_ffi(args, nargs)?),
 			_ => None,
 		})
 	}
@@ -207,5 +209,16 @@ impl ScriptEngine {
 		let num: usize = num.try_into().map_err(|_| anyhow!("num argument must be a positive integer"))?;
 
 		Ok(ScriptValue::Range { start, step, num })
+	}
+
+	#[ffi_func]
+	fn builtin_scale(&mut self, x: Number, y: Number) -> Result<ScriptValue> {
+		if x.unit != Unit::None || y.unit != Unit::None {
+			bail!("All arguments must not have a unit");
+		}
+
+		self.gcode.transformation = Matrix3::new_nonuniform_scaling(&Vector2::new(x.into(), y.into()));
+
+		Ok(ScriptValue::Null)
 	}
 }

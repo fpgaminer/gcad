@@ -11,6 +11,7 @@ quote = "1"
 proc-macro2 = "1"
 clap = { version = "3.2.17", features = ["derive"] }
 anyhow = { version = "1.0.62", features = ["backtrace"] }
+nalgebra = "0.31.1"
 
 [lib]
 proc-macro = true
