@@ -3,9 +3,10 @@ mod gcode;
 mod numbers;
 mod value;
 
+use anyhow::Result;
 use clap::Parser;
 use engine::ScriptEngine;
-use std::{fs, path::PathBuf};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -14,19 +15,23 @@ struct Args {
 	#[clap(short, long, value_parser, required = true)]
 	output: PathBuf,
 
+	/// Verbose
+	#[clap(short, long)]
+	verbose: bool,
+
 	/// Input file
 	#[clap(required = true)]
 	input: PathBuf,
 }
 
-fn main() {
+fn main() -> Result<()> {
 	let args = Args::parse();
 
-	let unparsed_file = fs::read_to_string(args.input).expect("Failed to read input file");
-	let mut machine = ScriptEngine::new(args.output);
+	let mut machine = ScriptEngine::new(args.output)?;
+	machine.write_header()?;
+	machine.run_file("materials.gcad", args.verbose)?;
+	machine.run_file(args.input, args.verbose)?;
+	machine.finish()?;
 
-	machine.run(&fs::read_to_string("materials.gcad").expect("Could not read 'materials.gcad'"));
-	machine.write_header();
-	machine.run(&unparsed_file);
-	machine.finish();
+	Ok(())
 }

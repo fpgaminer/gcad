@@ -31,7 +31,7 @@ pub fn ffi_func(_args: TokenStream, input: TokenStream) -> TokenStream {
 		} else {
 			let err_msg = format!("{}: {} is required", func_ident, ident);
 			quote! {
-				let #arg_ident = #arg_ident.expect(#err_msg);
+				let #arg_ident = #arg_ident.ok_or(anyhow!(#err_msg))?;
 			}
 		};
 
@@ -47,12 +47,14 @@ pub fn ffi_func(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 		arg_parsers.push(parser);
 		call_args.push(if is_optional {
+			let err_msg = format!("Argument {} is not the correct type", idx);
 			quote! {
-				#arg_ident.map(|#arg_ident| #arg_ident.try_into().expect("#func_ident: argument #idx is not the correct type"))
+				if let Some(#arg_ident) = #arg_ident { Some(#arg_ident.try_into().map_err(|_| anyhow!(#err_msg))?) } else { None }
 			}
 		} else {
+			let err_msg = format!("Argument {} is not the correct type", idx);
 			quote! {
-				#arg_ident.try_into().expect("#func_ident: argument #idx is not the correct type")
+				#arg_ident.try_into().map_err(|_| anyhow!(#err_msg))?
 			}
 		});
 	}
@@ -62,18 +64,18 @@ pub fn ffi_func(_args: TokenStream, input: TokenStream) -> TokenStream {
 	let unknown_named_err = format!("{}: unknown named argument {{}}", func_ident);
 
 	let our_func = quote! {
-		pub fn #ffi_name(&mut self, args: &[ScriptValue], nargs: &std::collections::HashMap<String, ScriptValue>) -> ScriptValue {
+		pub fn #ffi_name(&mut self, args: &[ScriptValue], nargs: &std::collections::HashMap<String, ScriptValue>) -> anyhow::Result<ScriptValue> {
 			let arg_len = args.len();
 			let mut args = args.into_iter();
 			let mut nargs = nargs.clone();
 			#(#arg_parsers)*
 
 			if args.next().is_some() {
-				panic!(#too_many_args_err, arg_len);
+				bail!(#too_many_args_err, arg_len);
 			}
 
 			if let Some(arg) = nargs.into_keys().next() {
-				panic!(#unknown_named_err, arg);
+				bail!(#unknown_named_err, arg);
 			}
 
 			self.#func_ident(#(#call_args),*)

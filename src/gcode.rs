@@ -4,6 +4,8 @@ use std::{
 	path::Path,
 };
 
+use anyhow::{bail, Context, Result};
+
 const RETRACT: f64 = 0.25;
 
 pub struct GcodeState {
@@ -24,10 +26,10 @@ pub struct GcodeState {
 }
 
 impl GcodeState {
-	pub fn new<P: AsRef<Path>>(output_path: P) -> GcodeState {
-		let file = File::create(output_path).expect("Could not create file");
+	pub fn new<P: AsRef<Path>>(output_path: P) -> Result<GcodeState> {
+		let file = File::create(output_path.as_ref()).with_context(|| format!("Failed to create file: {}", output_path.as_ref().display()))?;
 
-		GcodeState {
+		Ok(GcodeState {
 			file: BufWriter::new(file),
 
 			stepover: 0.0,
@@ -42,28 +44,28 @@ impl GcodeState {
 			x: None,
 			y: None,
 			z: None,
-		}
+		})
 	}
 
-	pub fn write_header(&mut self) {
+	pub fn write_header(&mut self) -> Result<()> {
 		self.file
-			.write_all("G90\nG21\n(Move to safe Z to avoid workholding)\nG53G0Z-5.000\nM05\n".as_bytes())
-			.expect("Could not write to file");
+			.write_all("G90\nG21\n(Move to safe Z to avoid workholding)\nG53G0Z-5.000\nM05\n".as_bytes())?;
+		Ok(())
 	}
 
-	pub fn set_rpm(&mut self, rpm: f64) {
-		self.file
-			.write_all(format!("M03S{}\n", format_number(rpm)).as_bytes())
-			.expect("Failed to write to file");
+	pub fn set_rpm(&mut self, rpm: f64) -> Result<()> {
+		self.file.write_all(format!("M03S{}\n", format_number(rpm)).as_bytes())?;
+		Ok(())
 	}
 
-	pub fn write_comment(&mut self, comment: &str) {
-		self.file.write_all(format!("( {} )\n", comment).as_bytes()).expect("Failed to write to file");
+	pub fn write_comment(&mut self, comment: &str) -> Result<()> {
+		self.file.write_all(format!("( {} )\n", comment).as_bytes())?;
+		Ok(())
 	}
 
-	pub fn cutting_move(&mut self, x: f64, y: f64) {
+	pub fn cutting_move(&mut self, x: f64, y: f64) -> Result<()> {
 		if self.x == Some(x) && self.y == Some(y) {
-			return;
+			return Ok(());
 		}
 
 		let mut command = Vec::new();
@@ -84,19 +86,19 @@ impl GcodeState {
 			command.push(format!("F{}", format_number(self.feed_rate)));
 		}
 
-		self.file
-			.write_all(format!("{}\n", command.join(" ")).as_bytes())
-			.expect("Failed to write to file");
+		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes())?;
 
 		self.last_feed = Some(self.feed_rate);
 		self.last_command = Some("G1".to_string());
 		self.x = Some(x);
 		self.y = Some(y);
+
+		Ok(())
 	}
 
-	pub fn plunge(&mut self, z: f64) {
+	pub fn plunge(&mut self, z: f64) -> Result<()> {
 		if self.z == Some(z) {
-			return;
+			return Ok(());
 		}
 
 		let mut command = Vec::new();
@@ -111,18 +113,18 @@ impl GcodeState {
 			command.push(format!("F{}", format_number(self.plunge_rate)));
 		}
 
-		self.file
-			.write_all(format!("{}\n", command.join(" ")).as_bytes())
-			.expect("Failed to write to file");
+		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes())?;
 
 		self.last_feed = Some(self.plunge_rate);
 		self.last_command = Some("G1".to_string());
 		self.z = Some(z);
+
+		Ok(())
 	}
 
-	pub fn rapid_move(&mut self, x: f64, y: f64, z: Option<f64>) {
+	pub fn rapid_move(&mut self, x: f64, y: f64, z: Option<f64>) -> Result<()> {
 		if self.x == Some(x) && self.y == Some(y) && self.z == z {
-			return;
+			return Ok(());
 		}
 
 		let mut command = Vec::new();
@@ -145,9 +147,7 @@ impl GcodeState {
 			}
 		}
 
-		self.file
-			.write_all(format!("{}\n", command.join(" ")).as_bytes())
-			.expect("Failed to write to file");
+		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes())?;
 
 		self.last_command = Some("G0".to_string());
 		self.x = Some(x);
@@ -155,11 +155,13 @@ impl GcodeState {
 		if let Some(z) = z {
 			self.z = Some(z);
 		}
+
+		Ok(())
 	}
 
-	pub fn arc_cut(&mut self, x: f64, y: f64, cx: f64, cy: f64) {
+	pub fn arc_cut(&mut self, x: f64, y: f64, cx: f64, cy: f64) -> Result<()> {
 		if self.x == Some(x) && self.y == Some(y) {
-			return;
+			return Ok(());
 		}
 
 		let mut command = Vec::new();
@@ -179,90 +181,95 @@ impl GcodeState {
 		if let Some(current_x) = self.x {
 			command.push(format!("I{}", format_number(cx - current_x)));
 		} else {
-			panic!("No current x position");
+			bail!("No current X position");
 		}
 
 		if let Some(current_y) = self.y {
 			command.push(format!("J{}", format_number(cy - current_y)));
 		} else {
-			panic!("No current y position");
+			bail!("No current y position");
 		}
 
 		if self.last_feed != Some(self.feed_rate) {
 			command.push(format!("F{}", format_number(self.feed_rate)));
 		}
 
-		self.file
-			.write_all(format!("{}\n", command.join(" ")).as_bytes())
-			.expect("Failed to write to file");
+		self.file.write_all(format!("{}\n", command.join(" ")).as_bytes())?;
 
 		self.last_feed = Some(self.feed_rate);
 		self.last_command = Some("G3".to_string());
 		self.x = Some(x);
 		self.y = Some(y);
+
+		Ok(())
 	}
 
-	pub fn drill(&mut self, x: f64, y: f64, z: f64) {
-		self.file.write(b"(Drill)\n").expect("Failed to write to file");
+	pub fn drill(&mut self, x: f64, y: f64, z: f64) -> Result<()> {
+		self.rapid_move(x, y, None)?;
+		self.rapid_move(x, y, Some(0.25))?;
+		self.plunge(z)?;
+		self.rapid_move(x, y, Some(5.0))?;
 
-		self.rapid_move(x, y, None);
-		self.rapid_move(x, y, Some(0.25));
-		self.plunge(z);
-		self.rapid_move(x, y, Some(5.0));
+		Ok(())
 	}
 
-	pub fn contour_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, depth: f64) {
+	pub fn contour_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, depth: f64) -> Result<()> {
 		let n_passes = (depth / self.depth_per_pass).ceil() as i64;
 
 		for layer in 1..=n_passes {
 			let z = -(depth * layer as f64 / n_passes as f64);
-			self.rapid_move(x1, y1, None);
-			self.plunge(z);
-			self.cutting_move(x2, y2);
-			self.rapid_move(x2, y2, Some(5.0));
+			self.rapid_move(x1, y1, None)?;
+			self.plunge(z)?;
+			self.cutting_move(x2, y2)?;
+			self.rapid_move(x2, y2, Some(5.0))?;
 		}
+
+		Ok(())
 	}
 
-	pub fn circle_pocket(&mut self, cx: f64, cy: f64, diameter: f64, depth: f64) {
+	pub fn circle_pocket(&mut self, cx: f64, cy: f64, diameter: f64, depth: f64) -> Result<()> {
 		if diameter <= self.cutter_diameter {
-			panic!("Diameter must be greater than cutter diameter");
+			bail!("Diameter must be greater than cutter diameter");
 		}
 
 		let n_circles = (diameter / self.cutter_diameter).floor() as i64;
 		let n_passes = (depth / self.depth_per_pass).ceil() as i64;
 		let x_offset = (diameter / 2.0) - (self.cutter_diameter * n_circles as f64 / 2.0);
 
-		self.rapid_move(cx + x_offset, cy, None);
-		self.plunge(2.5);
+		self.rapid_move(cx + x_offset, cy, None)?;
+		self.plunge(2.5)?;
 
 		for i in 1..=n_passes {
-			self.plunge(-(depth * i as f64 / n_passes as f64));
+			self.plunge(-(depth * i as f64 / n_passes as f64))?;
 
 			for j in 1..=n_circles {
-				self.arc_cut(2.0 * cx - self.x.unwrap(), cy, cx, cy);
+				self.arc_cut(2.0 * cx - self.x.unwrap(), cy, cx, cy)?;
 
 				if j == n_circles {
-					self.arc_cut(2.0 * cx - self.x.unwrap(), cy, cx, cy);
+					self.arc_cut(2.0 * cx - self.x.unwrap(), cy, cx, cy)?;
 				} else {
-					self.arc_cut(2.0 * cx - self.x.unwrap() + self.cutter_diameter / 2.0, cy, cx + self.cutter_diameter / 4.0, cy);
+					self.arc_cut(2.0 * cx - self.x.unwrap() + self.cutter_diameter / 2.0, cy, cx + self.cutter_diameter / 4.0, cy)?;
 				}
 			}
 
 			if i < n_passes {
-				self.cutting_move(cx + x_offset, cy);
+				self.cutting_move(cx + x_offset, cy)?;
 			}
 		}
 
-		self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(5.0));
+		self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(5.0))?;
+
+		Ok(())
 	}
 
-	pub fn finish(&mut self) {
-		self.file.write(b"M02\n").expect("Failed to write to file");
+	pub fn finish(&mut self) -> Result<()> {
+		self.file.write(b"M02\n")?;
+		Ok(())
 	}
 
 	/// Cuts a rectangular pocket with the given dimensions, and x y specifying the lower left corner.
 	/// Note that this only handles narrow rectangles right now, hence the name groove.
-	pub fn groove_pocket(&mut self, x: f64, y: f64, width: f64, height: f64, depth: f64) {
+	pub fn groove_pocket(&mut self, x: f64, y: f64, width: f64, height: f64, depth: f64) -> Result<()> {
 		// Build the cutting pattern backwards
 		let mut pattern = Vec::new();
 
@@ -296,22 +303,24 @@ impl GcodeState {
 			let (x, y) = pattern[0];
 
 			if layer == 1 {
-				self.rapid_move(x, y, None);
-				self.rapid_move(x, y, Some(5.0));
-				self.plunge(z);
+				self.rapid_move(x, y, None)?;
+				self.rapid_move(x, y, Some(5.0))?;
+				self.plunge(z)?;
 			} else {
-				self.rapid_move(x, y, None);
-				self.plunge(z);
+				self.rapid_move(x, y, None)?;
+				self.plunge(z)?;
 			}
 
 			for (x, y) in pattern.iter().skip(1) {
-				self.cutting_move(*x, *y);
+				self.cutting_move(*x, *y)?;
 			}
 
-			self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(self.z.unwrap() + RETRACT));
+			self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(self.z.unwrap() + RETRACT))?;
 		}
 
-		self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(5.0));
+		self.rapid_move(self.x.unwrap(), self.y.unwrap(), Some(5.0))?;
+
+		Ok(())
 	}
 }
 
