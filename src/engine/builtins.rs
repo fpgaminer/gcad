@@ -26,6 +26,7 @@ impl ScriptEngine {
 			"comment" => Some(self.builtin_comment_ffi(args, nargs)?),
 			"linspace" => Some(self.builtin_linspace_ffi(args, nargs)?),
 			"scale" => Some(self.builtin_scale_ffi(args, nargs)?),
+			"translate" => Some(self.builtin_translate_ffi(args, nargs)?),
 			_ => None,
 		})
 	}
@@ -205,8 +206,16 @@ impl ScriptEngine {
 
 		let stop = stop.convert_unit(start.unit);
 		let num: i64 = num.try_into().map_err(|_| anyhow!("num argument must be an integer"))?;
-		let step = (stop - start) / (num - 1).into();
+		let mut step = (stop - start) / (num - 1).into();
 		let num: usize = num.try_into().map_err(|_| anyhow!("num argument must be a positive integer"))?;
+
+		if num == 1 {
+			if start != stop {
+				bail!("start and stop must be equal if num is 1");
+			}
+
+			step = stop - start;
+		}
 
 		Ok(ScriptValue::Range { start, step, num })
 	}
@@ -217,7 +226,23 @@ impl ScriptEngine {
 			bail!("All arguments must not have a unit");
 		}
 
-		self.gcode.transformation = Matrix3::new_nonuniform_scaling(&Vector2::new(x.into(), y.into()));
+		self.gcode.transformation *= Matrix3::new_nonuniform_scaling(&Vector2::new(x.into(), y.into()));
+
+		println!("scale: {:?}", self.gcode.transformation);
+
+		Ok(ScriptValue::Null)
+	}
+
+	#[ffi_func]
+	fn builtin_translate(&mut self, x: Number, y: Number) -> Result<ScriptValue> {
+		if x.unit == Unit::None || y.unit == Unit::None {
+			bail!("All arguments must have a unit");
+		}
+
+		let x: f64 = x.convert_unit(Unit::MM).into();
+		let y: f64 = y.convert_unit(Unit::MM).into();
+
+		self.gcode.transformation *= Matrix3::new_translation(&Vector2::new(x, y));
 
 		Ok(ScriptValue::Null)
 	}
