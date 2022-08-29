@@ -31,14 +31,14 @@ pub struct ScriptEngine {
 }
 
 impl ScriptEngine {
-	pub fn new<P: AsRef<Path>>(output_path: P) -> Result<Self> {
-		let gcode = GcodeState::new(output_path)?;
+	pub fn new() -> Self {
+		let gcode = GcodeState::new();
 
-		Ok(Self {
+		Self {
 			global_vars: HashMap::new(),
 			materials: HashMap::new(),
 			gcode,
-		})
+		}
 	}
 
 	pub fn run_file<P: AsRef<Path>>(&mut self, path: P, verbose: bool) -> Result<()> {
@@ -85,12 +85,12 @@ impl ScriptEngine {
 		}
 	}
 
-	pub fn write_header(&mut self) -> Result<()> {
+	pub fn write_header(&mut self) {
 		self.gcode.write_header()
 	}
 
-	pub fn finish(&mut self) -> Result<()> {
-		self.gcode.finish()
+	pub fn finish<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+		self.gcode.finish(path)
 	}
 
 	fn exec(&mut self, pair: pest::iterators::Pair<Rule>) -> Result<ScriptValue> {

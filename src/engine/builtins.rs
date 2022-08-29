@@ -34,7 +34,7 @@ impl ScriptEngine {
 	fn builtin_rpm(&mut self, rpm: Number) -> Result<ScriptValue> {
 		let rpm = rpm.as_float().ok_or(anyhow!("rpm: argument 0 must be a number"))?;
 
-		self.gcode.set_rpm(rpm)?;
+		self.gcode.set_rpm(rpm);
 
 		Ok(ScriptValue::Null)
 	}
@@ -47,7 +47,7 @@ impl ScriptEngine {
 			self.gcode.feed_rate = material.feed_rate;
 			self.gcode.plunge_rate = material.plunge_rate;
 
-			self.gcode.set_rpm(material.rpm)?;
+			self.gcode.set_rpm(material.rpm);
 		} else {
 			bail!("Unknown material: {}", name);
 		}
@@ -98,7 +98,7 @@ impl ScriptEngine {
 			x2.convert_unit(Unit::MM).into(),
 			y2.convert_unit(Unit::MM).into(),
 			depth.convert_unit(Unit::MM).into(),
-		)?;
+		);
 
 		Ok(ScriptValue::Null)
 	}
@@ -113,7 +113,7 @@ impl ScriptEngine {
 			x.convert_unit(Unit::MM).into(),
 			y.convert_unit(Unit::MM).into(),
 			depth.convert_unit(Unit::MM).into(),
-		)?;
+		);
 
 		Ok(ScriptValue::Null)
 	}
@@ -184,7 +184,7 @@ impl ScriptEngine {
 
 	#[ffi_func]
 	fn builtin_comment(&mut self, text: String) -> Result<ScriptValue> {
-		self.gcode.write_comment(&text)?;
+		self.gcode.write_comment(&text);
 
 		Ok(ScriptValue::Null)
 	}

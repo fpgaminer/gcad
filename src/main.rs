@@ -27,11 +27,11 @@ struct Args {
 fn main() -> Result<()> {
 	let args = Args::parse();
 
-	let mut machine = ScriptEngine::new(args.output)?;
-	machine.write_header()?;
+	let mut machine = ScriptEngine::new();
+	machine.write_header();
 	machine.run_file("materials.gcad", args.verbose)?;
 	machine.run_file(args.input, args.verbose)?;
-	machine.finish()?;
+	machine.finish(args.output)?;
 
 	Ok(())
 }
