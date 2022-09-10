@@ -5,7 +5,7 @@ license = "MIT OR Apache-2.0"
 name = "gcad_proc_macros"
 readme = "README.md"
 repository = "https://github.com/fpgaminer/gcad"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 documentation = "https://docs.rs/gcad"
 
