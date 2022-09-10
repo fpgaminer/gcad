@@ -228,8 +228,6 @@ impl ScriptEngine {
 
 		self.gcode.transformation *= Matrix3::new_nonuniform_scaling(&Vector2::new(x.into(), y.into()));
 
-		println!("scale: {:?}", self.gcode.transformation);
-
 		Ok(ScriptValue::Null)
 	}
 
