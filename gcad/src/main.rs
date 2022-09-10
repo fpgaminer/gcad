@@ -1,12 +1,7 @@
-mod engine;
-mod gcode;
-mod numbers;
-mod value;
-
-use anyhow::Result;
+use anyhow::{Result, Context};
 use clap::Parser;
-use engine::ScriptEngine;
-use std::path::PathBuf;
+use libgcad::{ScriptEngine, BUILTIN_MATERIALS};
+use std::{path::PathBuf, fs::File, io::BufWriter};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -29,9 +24,12 @@ fn main() -> Result<()> {
 
 	let mut machine = ScriptEngine::new();
 	machine.write_header();
-	machine.run_file("materials.gcad", args.verbose)?;
+	machine.run(BUILTIN_MATERIALS, args.verbose)?;
 	machine.run_file(args.input, args.verbose)?;
-	machine.finish(args.output)?;
+
+	let mut output_file = File::create(&args.output).with_context(|| format!("Failed to create file: {}", args.output.display()))?;
+	let writer = BufWriter::new(&mut output_file);
+	machine.finish(writer)?;
 
 	Ok(())
 }

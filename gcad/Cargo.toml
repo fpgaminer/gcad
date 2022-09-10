@@ -1,0 +1,15 @@
+[package]
+authors = ["fpgaminer <fpgaminer@bitcoin-mining.com>"]
+description = "A simple CAD/CAM scripting language"
+license = "MIT OR Apache-2.0"
+name = "gcad"
+readme = "README.md"
+repository = "https://github.com/fpgaminer/gcad"
+version = "0.1.0"
+edition = "2021"
+documentation = "https://docs.rs/gcad"
+
+[dependencies]
+clap = { version = "3.2.17", features = ["derive"] }
+anyhow = { version = "1.0.62", features = ["backtrace"] }
+libgcad = { path = "../libgcad" }

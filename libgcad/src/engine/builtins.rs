@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use gcad_macro::ffi_func;
+use gcad_proc_macros::ffi_func;
 
 use anyhow::{anyhow, bail, Result};
 use nalgebra::{Matrix3, Vector2};

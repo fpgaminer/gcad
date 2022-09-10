@@ -1,6 +1,6 @@
 mod builtins;
 
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, io::Write};
 
 use pest::{
 	iterators::Pair,
@@ -89,8 +89,8 @@ impl ScriptEngine {
 		self.gcode.write_header()
 	}
 
-	pub fn finish<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-		self.gcode.finish(path)
+	pub fn finish<W: Write>(&mut self, writer: W) -> Result<()> {
+		self.gcode.finish(writer)
 	}
 
 	fn exec(&mut self, pair: pest::iterators::Pair<Rule>) -> Result<ScriptValue> {

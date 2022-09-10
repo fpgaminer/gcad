@@ -1,11 +1,9 @@
 use std::{
 	collections::HashMap,
-	fs::File,
-	io::{BufWriter, Write},
-	path::Path,
+	io::Write,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use nalgebra::{Matrix3, Point2};
 
 const RETRACT: f64 = 0.25;
@@ -160,14 +158,12 @@ impl GcodeState {
 		Ok(())
 	}
 
-	pub fn finish<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+	pub fn finish<W: Write>(&mut self, writer: W) -> Result<()> {
 		self.program.push(GCode::ProgramEnd);
-		self.write_program(path)
+		self.write_program(writer)
 	}
 
-	fn write_program<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-		let mut file = File::create(path.as_ref()).with_context(|| format!("Failed to create file {}", path.as_ref().display()))?;
-		let mut writer = BufWriter::new(&mut file);
+	fn write_program<W: Write>(&self, mut writer: W) -> Result<()> {
 		let mut last_command = None;
 		let mut state = HashMap::new();
 

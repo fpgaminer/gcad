@@ -1,0 +1,25 @@
+[package]
+authors = ["fpgaminer <fpgaminer@bitcoin-mining.com>"]
+description = "A simple CAD/CAM scripting language"
+license = "MIT OR Apache-2.0"
+name = "gcad_proc_macros"
+readme = "README.md"
+repository = "https://github.com/fpgaminer/gcad"
+version = "0.1.0"
+edition = "2021"
+documentation = "https://docs.rs/gcad"
+
+[dependencies]
+pest = { version = "2.3.0", features = ["const_prec_climber"] }
+pest_derive = "2.3.0"
+syn = { version = "1", features = ["full", "extra-traits", "printing"] }
+quote = "1"
+proc-macro2 = "1"
+clap = { version = "3.2.17", features = ["derive"] }
+anyhow = { version = "1.0.62", features = ["backtrace"] }
+nalgebra = "0.31.1"
+
+[lib]
+proc-macro = true
+name = "gcad_proc_macros"
+path = "src/lib.rs"
