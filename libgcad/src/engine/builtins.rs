@@ -99,7 +99,7 @@ impl ScriptEngine {
 			x2.convert_unit(Unit::MM).into(),
 			y2.convert_unit(Unit::MM).into(),
 			depth.convert_unit(Unit::MM).into(),
-		);
+		)?;
 
 		Ok(ScriptValue::Null)
 	}

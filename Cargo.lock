@@ -170,16 +170,32 @@ dependencies = [
 
 [[package]]
 name = "gcad"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
- "libgcad",
+ "libgcad 0.2.0",
 ]
 
 [[package]]
 name = "gcad_proc_macros"
-version = "0.1.0"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "nalgebra",
+ "pest",
+ "pest_derive",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "gcad_proc_macros"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e10f5485153b331c39d505204aa92e4bac0d22df9c0418096fb20274db7c5c8"
 dependencies = [
  "anyhow",
  "clap",
@@ -246,11 +262,25 @@ checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
 
 [[package]]
 name = "libgcad"
-version = "0.1.0"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6561545c1fb9748f2448013034c9d48e65863a82e85592c95216dcd0e9b3bd48"
 dependencies = [
  "anyhow",
  "clap",
- "gcad_proc_macros",
+ "gcad_proc_macros 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nalgebra",
+ "pest",
+ "pest_derive",
+]
+
+[[package]]
+name = "libgcad"
+version = "0.2.1"
+dependencies = [
+ "anyhow",
+ "clap",
+ "gcad_proc_macros 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra",
  "pest",
  "pest_derive",

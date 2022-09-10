@@ -111,7 +111,11 @@ impl GcodeState {
 		self.rapid_move(x, y, Some(5.0));
 	}
 
-	pub fn contour_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, depth: f64) {
+	pub fn contour_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, depth: f64) -> Result<()> {
+		if self.depth_per_pass <= 0.0 {
+			bail!("Invalid depth per pass");
+		}
+
 		let n_passes = (depth / self.depth_per_pass).ceil() as i64;
 
 		for layer in 1..=n_passes {
@@ -121,11 +125,21 @@ impl GcodeState {
 			self.cutting_move(x2, y2, None);
 			self.rapid_move(x2, y2, Some(5.0));
 		}
+
+		Ok(())
 	}
 
 	pub fn circle_pocket(&mut self, cx: f64, cy: f64, diameter: f64, depth: f64) -> Result<()> {
 		if diameter <= self.cutter_diameter {
 			bail!("Diameter must be greater than cutter diameter");
+		}
+
+		if self.depth_per_pass <= 0.0 {
+			bail!("Invalid depth per pass: {}", self.depth_per_pass);
+		}
+
+		if self.cutter_diameter <= 0.0 {
+			bail!("Invalid cutter diameter: {}", self.cutter_diameter);
 		}
 
 		let n_circles = (diameter / self.cutter_diameter).floor() as i64;
@@ -237,6 +251,14 @@ impl GcodeState {
 	/// Cuts a rectangular pocket with the given dimensions, and x y specifying the lower left corner.
 	/// Note that this only handles narrow rectangles right now, hence the name groove.
 	pub fn groove_pocket(&mut self, x: f64, y: f64, width: f64, height: f64, depth: f64) -> Result<()> {
+		if self.stepover <= 0.0 {
+			bail!("Invalid stepover: {}", self.stepover);
+		}
+
+		if self.depth_per_pass <= 0.0 {
+			bail!("Invalid depth per pass: {}", self.depth_per_pass);
+		}
+
 		// Build the cutting pattern backwards
 		let mut pattern = Vec::new();
 
