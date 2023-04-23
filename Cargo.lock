@@ -321,6 +321,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gcad_proc_macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c144a918f73c9c0ee5037b095fb00f3b8ce838dbbd04c86dbad73c546a2b298"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -421,7 +432,7 @@ name = "libgcad"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "gcad_proc_macros 0.2.0",
+ "gcad_proc_macros 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.32.2",
  "pest",
  "pest_derive",

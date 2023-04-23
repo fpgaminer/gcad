@@ -14,4 +14,4 @@ pest = { version = "2.5.7" }
 pest_derive = "2.5.7"
 anyhow = { version = "1.0.70", features = ["backtrace"] }
 nalgebra = "0.32.2"
-gcad_proc_macros = { version = "0.2.0" }
+gcad_proc_macros = { version = "0.3.0" }
