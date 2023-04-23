@@ -12,4 +12,4 @@ documentation = "https://docs.rs/gcad"
 [dependencies]
 clap = { version = "4.2.4", features = ["derive"] }
 anyhow = { version = "1.0.70", features = ["backtrace"] }
-libgcad = { version = "0.2.2" }
+libgcad = { version = "0.3.0" }
