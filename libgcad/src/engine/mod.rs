@@ -1,10 +1,9 @@
 mod builtins;
 
-use std::{collections::HashMap, path::Path, io::Write};
+use std::{collections::HashMap, io::Write, path::Path};
 
 use pest::{
-	iterators::Pair,
-	prec_climber::{Assoc, PrecClimber},
+	pratt_parser::{Assoc, Op, PrattParser},
 	Parser,
 };
 use pest_derive::Parser;
@@ -17,12 +16,6 @@ use anyhow::{bail, Context, Result};
 #[grammar = "grammar.pest"]
 pub struct ScriptParser;
 
-static CLIMBER: PrecClimber<Rule> = PrecClimber::new_const(&[
-	(Rule::add, 1, Assoc::Left),
-	(Rule::subtract, 1, Assoc::Left),
-	(Rule::multiply, 2, Assoc::Left),
-	(Rule::divide, 2, Assoc::Left),
-]);
 
 pub struct ScriptEngine {
 	global_vars: HashMap<String, ScriptValue>,
@@ -94,6 +87,13 @@ impl ScriptEngine {
 	}
 
 	fn exec(&mut self, pair: pest::iterators::Pair<Rule>) -> Result<ScriptValue> {
+		let pratt = PrattParser::new()
+			.op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::subtract, Assoc::Left))
+			.op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left))
+			.op(Op::infix(Rule::power, Assoc::Right))
+			.op(Op::postfix(Rule::factorial))
+			.op(Op::prefix(Rule::negate));
+
 		Ok(match pair.as_rule() {
 			Rule::expr => self.exec(pair.into_inner().next().unwrap())?,
 			Rule::assign => {
@@ -106,10 +106,25 @@ impl ScriptEngine {
 
 				expr
 			},
-			Rule::mathExpr => CLIMBER.climb(
-				pair.into_inner(),
-				|pair: Pair<Rule>| self.exec(pair),
-				|lhs: Result<ScriptValue>, op: Pair<Rule>, rhs: Result<ScriptValue>| {
+			Rule::mathExpr => pratt
+				.map_primary(|primary| self.exec(primary))
+				.map_prefix(|op, rhs| {
+					let rhs = rhs?;
+
+					Ok(match op.as_rule() {
+						Rule::negate => -rhs,
+						_ => unreachable!(),
+					})
+				})
+				.map_postfix(|lhs, op| {
+					let lhs = lhs?;
+
+					Ok(match op.as_rule() {
+						Rule::factorial => lhs.factorial(),
+						_ => unreachable!(),
+					})
+				})
+				.map_infix(|lhs, op, rhs| {
 					let lhs = lhs?;
 					let rhs = rhs?;
 
@@ -118,15 +133,16 @@ impl ScriptEngine {
 						Rule::subtract => lhs - rhs,
 						Rule::multiply => lhs * rhs,
 						Rule::divide => lhs / rhs,
+						Rule::power => lhs.pow(&rhs),
 						_ => unreachable!(),
 					})
-				},
-			)?,
+				})
+				.parse(pair.into_inner())?,
 			Rule::string => {
 				let str = &pair.as_str();
 				let str = &str[1..str.len() - 1];
 				let str = str.replace("''", "'");
-				ScriptValue::String(str.to_string())
+				ScriptValue::String(str)
 			},
 			Rule::funcCall => {
 				let span = pair.as_span();
@@ -144,7 +160,7 @@ impl ScriptEngine {
 				} else {
 					return Err(pest::error::Error::new_from_span(
 						pest::error::ErrorVariant::<()>::CustomError {
-							message: format!("Function not found"),
+							message: "Function not found".to_string(),
 						},
 						ident_span,
 					)
@@ -243,6 +259,13 @@ impl ScriptEngine {
 		}
 
 		Ok((positional_args, named_args))
+	}
+}
+
+
+impl Default for ScriptEngine {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 

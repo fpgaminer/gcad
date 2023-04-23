@@ -1,7 +1,4 @@
-use std::{
-	collections::HashMap,
-	io::Write,
-};
+use std::{collections::HashMap, io::Write};
 
 use anyhow::{bail, Result};
 use nalgebra::{Matrix3, Point2};
@@ -62,7 +59,7 @@ impl GcodeState {
 		self.program.push(GCode::LinearMove {
 			x: Some(xy.x),
 			y: Some(xy.y),
-			z: z,
+			z,
 			feed: self.feed_rate,
 		});
 	}
@@ -83,7 +80,7 @@ impl GcodeState {
 		self.program.push(GCode::RapidMove {
 			x: Some(xy.x),
 			y: Some(xy.y),
-			z: z,
+			z,
 		});
 	}
 
@@ -208,10 +205,8 @@ impl GcodeState {
 						}
 					},
 					GcodeWord::X(v) | GcodeWord::Y(v) | GcodeWord::Z(v) | GcodeWord::I(v) | GcodeWord::J(v) | GcodeWord::F(v) | GcodeWord::S(v) => {
-						if g53 {
+						if g53 || state.get(&word.to_char()) != Some(v) {
 							pieces.push(*word);
-						} else if state.get(&word.to_char()) != Some(&v) {
-							pieces.push(word.clone());
 						}
 					},
 				}
@@ -372,24 +367,19 @@ enum GcodeWord {
 impl GCode {
 	fn to_words(&self, current_x: Option<f64>, current_y: Option<f64>) -> Result<Vec<GcodeWord>> {
 		Ok(match self {
-			GCode::RapidMove { x, y, z } => vec![
-				Some(GcodeWord::G(0)),
-				x.map(|x| GcodeWord::X(x)),
-				y.map(|y| GcodeWord::Y(y)),
-				z.map(|z| GcodeWord::Z(z)),
-			]
-			.into_iter()
-			.filter_map(|x| x)
-			.collect(),
+			GCode::RapidMove { x, y, z } => vec![Some(GcodeWord::G(0)), x.map(GcodeWord::X), y.map(GcodeWord::Y), z.map(GcodeWord::Z)]
+				.into_iter()
+				.flatten()
+				.collect(),
 			GCode::LinearMove { x, y, z, feed } => vec![
 				Some(GcodeWord::G(1)),
-				x.map(|x| GcodeWord::X(x)),
-				y.map(|y| GcodeWord::Y(y)),
-				z.map(|z| GcodeWord::Z(z)),
+				x.map(GcodeWord::X),
+				y.map(GcodeWord::Y),
+				z.map(GcodeWord::Z),
 				Some(GcodeWord::F(*feed)),
 			]
 			.into_iter()
-			.filter_map(|x| x)
+			.flatten()
 			.collect(),
 			GCode::CounterClockwiseArc { x, y, cx, cy, feed } => {
 				if let (Some(current_x), Some(current_y)) = (current_x, current_y) {
@@ -402,7 +392,7 @@ impl GCode {
 						Some(GcodeWord::F(*feed)),
 					]
 					.into_iter()
-					.filter_map(|x| x)
+					.flatten()
 					.collect()
 				} else {
 					bail!("Cannot generate G3 arc without current position");
@@ -423,15 +413,9 @@ impl GCode {
 	}
 
 	fn is_empty(&self, words: &[GcodeWord]) -> bool {
-		let pos_present = words.iter().any(|w| match w {
-			GcodeWord::X(_) | GcodeWord::Y(_) | GcodeWord::Z(_) => true,
-			_ => false,
-		});
+		let pos_present = words.iter().any(|w| matches!(w, GcodeWord::X(_) | GcodeWord::Y(_) | GcodeWord::Z(_)));
 
-		let s_present = words.iter().any(|w| match w {
-			GcodeWord::S(_) => true,
-			_ => false,
-		});
+		let s_present = words.iter().any(|w| matches!(w, GcodeWord::S(_)));
 
 		match self {
 			GCode::Comment(_) => unreachable!(),
@@ -467,7 +451,7 @@ impl ToString for GcodeWord {
 }
 
 impl GcodeWord {
-	fn to_char(&self) -> char {
+	fn to_char(self) -> char {
 		match self {
 			GcodeWord::G(_) => 'G',
 			GcodeWord::M(_) => 'M',

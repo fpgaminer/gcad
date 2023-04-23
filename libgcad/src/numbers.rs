@@ -1,5 +1,5 @@
 use std::{
-	ops::{Add, Div, Mul, Sub},
+	ops::{Add, Div, Mul, Neg, Sub},
 	str::FromStr,
 };
 
@@ -52,6 +52,22 @@ impl InnerValue {
 			InnerValue::Float(f) => *f,
 		}
 	}
+
+	pub fn pow(self, other: InnerValue) -> InnerValue {
+		match (self, other) {
+			(InnerValue::Integer(i), InnerValue::Integer(j)) => InnerValue::Integer(i.pow(j as u32)),
+			(InnerValue::Integer(i), InnerValue::Float(j)) => InnerValue::Float((i as f64).powf(j)),
+			(InnerValue::Float(i), InnerValue::Float(j)) => InnerValue::Float(i.powf(j)),
+			(InnerValue::Float(i), InnerValue::Integer(j)) => InnerValue::Float(i.powf(j as f64)),
+		}
+	}
+
+	pub fn factorial(self) -> InnerValue {
+		match self {
+			InnerValue::Integer(i) => InnerValue::Integer((1..=i).product()),
+			InnerValue::Float(f) => InnerValue::Float((1..=(f as i64)).product::<i64>() as f64),
+		}
+	}
 }
 
 impl Add for InnerValue {
@@ -102,6 +118,17 @@ impl Div for InnerValue {
 			(InnerValue::Integer(i), InnerValue::Float(j)) => InnerValue::Float(i as f64 / j),
 			(InnerValue::Float(i), InnerValue::Float(j)) => InnerValue::Float(i / j),
 			(InnerValue::Float(i), InnerValue::Integer(j)) => InnerValue::Float(i / j as f64),
+		}
+	}
+}
+
+impl Neg for InnerValue {
+	type Output = InnerValue;
+
+	fn neg(self) -> InnerValue {
+		match self {
+			InnerValue::Integer(i) => InnerValue::Integer(-i),
+			InnerValue::Float(f) => InnerValue::Float(-f),
 		}
 	}
 }
@@ -194,6 +221,22 @@ impl Number {
 
 		Number { value, unit }
 	}
+
+	pub fn pow(&self, other: &Number) -> Number {
+		let (lhs, rhs) = convert_units_for_math(self, other);
+
+		Number {
+			value: lhs.value.pow(rhs.value),
+			unit: lhs.unit,
+		}
+	}
+
+	pub fn factorial(&self) -> Number {
+		Number {
+			value: self.value.factorial(),
+			unit: self.unit,
+		}
+	}
 }
 
 fn convert_units_for_math(lhs: &Number, rhs: &Number) -> (Number, Number) {
@@ -226,6 +269,17 @@ math_impl! {
 	Number, Sub, sub
 	Number, Mul, mul
 	Number, Div, div
+}
+
+impl Neg for Number {
+	type Output = Number;
+
+	fn neg(self) -> Number {
+		Number {
+			value: -self.value,
+			unit: self.unit,
+		}
+	}
 }
 
 impl TryFrom<ScriptValue> for Number {

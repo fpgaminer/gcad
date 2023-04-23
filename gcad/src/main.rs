@@ -1,7 +1,7 @@
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use clap::Parser;
 use libgcad::{ScriptEngine, BUILTIN_MATERIALS};
-use std::{path::PathBuf, fs::File, io::BufWriter};
+use std::{fs::File, io::BufWriter, path::PathBuf};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

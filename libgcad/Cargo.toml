@@ -5,14 +5,13 @@ license = "MIT OR Apache-2.0"
 name = "libgcad"
 readme = "README.md"
 repository = "https://github.com/fpgaminer/gcad"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
 documentation = "https://docs.rs/gcad"
 
 [dependencies]
-pest = { version = "2.3.0", features = ["const_prec_climber"] }
-pest_derive = "2.3.0"
-clap = { version = "3.2.17", features = ["derive"] }
-anyhow = { version = "1.0.62", features = ["backtrace"] }
-nalgebra = "0.31.1"
+pest = { version = "2.5.7" }
+pest_derive = "2.5.7"
+anyhow = { version = "1.0.70", features = ["backtrace"] }
+nalgebra = "0.32.2"
 gcad_proc_macros = { version = "0.2.0" }

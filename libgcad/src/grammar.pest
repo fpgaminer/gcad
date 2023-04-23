@@ -10,12 +10,12 @@ stmt = _{
 forLoop = { "for" ~ ident ~ "in" ~ expr ~ block }
 
 expr = {
-	  mathExpr
-	| assign
+	  assign
+	| mathExpr
 	| trivialExpr
 }
 
-mathExpr = { trivialExpr ~ operation ~ expr }
+mathExpr = { prefix? ~ trivialExpr ~ postfix* ~ (operation ~ prefix* ~ trivialExpr ~ postfix* )* }
 
 trivialExpr = _{
 	  literal
@@ -31,6 +31,13 @@ operation = _{ add | subtract | multiply | divide }
 	subtract  = { "-" }
 	multiply  = { "*" }
 	divide    = { "/" }
+	power     = { "^" }
+
+prefix = _{ negate }
+	negate = { "-" }
+
+postfix = _{ factorial }
+	factorial = { "!" }
 
 literal = _{ unit_number | unitless_number | string}
 	unit_number = { decimal ~ length_unit | integer ~ length_unit }

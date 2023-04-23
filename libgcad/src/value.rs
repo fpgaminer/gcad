@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::numbers::Number;
 
@@ -9,6 +9,22 @@ pub enum ScriptValue {
 	String(String),
 	Range { start: Number, step: Number, num: usize },
 	Null,
+}
+
+impl ScriptValue {
+	pub fn pow(&self, other: &ScriptValue) -> ScriptValue {
+		match (self, other) {
+			(ScriptValue::Number(a), ScriptValue::Number(b)) => ScriptValue::Number(a.pow(b)),
+			_ => panic!("Cannot do math on non-numbers"),
+		}
+	}
+
+	pub fn factorial(&self) -> ScriptValue {
+		match self {
+			ScriptValue::Number(a) => ScriptValue::Number(a.factorial()),
+			_ => panic!("Cannot do math on non-numbers"),
+		}
+	}
 }
 
 macro_rules! math_impl {
@@ -31,6 +47,17 @@ math_impl! {
 	ScriptValue, Sub, sub
 	ScriptValue, Mul, mul
 	ScriptValue, Div, div
+}
+
+impl Neg for ScriptValue {
+	type Output = ScriptValue;
+
+	fn neg(self) -> ScriptValue {
+		match self {
+			ScriptValue::Number(a) => ScriptValue::Number(-a),
+			_ => panic!("Cannot do math on non-numbers"),
+		}
+	}
 }
 
 impl TryFrom<ScriptValue> for String {
